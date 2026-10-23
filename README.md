@@ -6,6 +6,7 @@
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 [![GitHub](https://img.shields.io/badge/GitHub-ORION--AI-181717?logo=github)](https://github.com/poonamsaini-123/ORION-AI)
+
 **Think clearly. Plan intelligently. Act with context.**
 
 ORION is a personal orchestration agent that helps users decide what to work on based on available time, task deadlines, and scheduled events. It combines a schedule-aware planning engine, a self-hosted Model Context Protocol (MCP) server, and a voice-enabled web interface to make everyday task and study management more actionable.
