@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1020">
+    <meta name="orion-ui-version" content="1.1.0">
+    <meta name="description" content="ORION: an MCP-powered task and study-planning agent with voice briefings.">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23252c55'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='%23b7c1ff' font-family='sans-serif' font-weight='700'%3EO%3C/text%3E%3C/svg%3E">
+    <title>ORION — Intelligent Orchestration</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <a class="brand" href="#home">
+                <div class="brand-icon">O</div>
+                <div>
+                    <h2>ORION</h2>
+                    <span>INTELLIGENT ORCHESTRATION</span>
+                </div>
+            </a>
+
+            <p class="sidebar-label">WORKSPACE</p>
+            <a class="nav-item active" href="#home"><span>✦</span> AI Assistant</a>
+            <a class="nav-item" href="#briefing"><span>☀</span> Daily Briefing</a>
+            <a class="nav-item" href="#results"><span>◷</span> Study Planning</a>
+            <a class="nav-item" href="#tasks"><span>▤</span> Task Manager</a>
+            <a class="nav-item" href="#schedule"><span>◫</span> Schedule</a>
+            <a class="nav-item" href="#mcp"><span>⌁</span> MCP Tools</a>
+
+            <div class="sidebar-bottom">
+                <span class="status-dot" id="statusDot"></span>
+                <div>
+                    <strong>ORION server</strong>
+                    <span id="connectionStatus">Checking connection...</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main" id="home">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">YOUR PERSONAL ORCHESTRATION AGENT</p>
+                    <h1>Think clearly. Act intelligently.</h1>
+                </div>
+                <div class="connection">
+                    <span></span> MCP · STREAMABLE HTTP
+                </div>
+            </header>
+
+            <section class="welcome">
+                <div class="orb">✦</div>
+                <p class="eyebrow">MEET YOUR AI AGENT</p>
+                <h2>Let's make your time<br><span>work for you.</span></h2>
+                <p class="welcome-copy">
+                    Tell ORION what you need to accomplish and how much time
+                    you have, by typing or by voice. It builds a plan around
+                    your deadlines, priorities and schedule.
+                </p>
+            </section>
+
+            <section class="briefing panel" id="briefing">
+                <div class="section-heading">
+                    <div>
+                        <h3>Today's briefing</h3>
+                        <p>What needs your attention right now.</p>
+                    </div>
+                    <button id="listenBriefing" class="button-secondary" type="button" hidden>🔊 Listen</button>
+                </div>
+                <p id="briefingText" class="briefing-text" aria-live="polite">Loading your briefing...</p>
+                <div id="briefingChips" class="chips"></div>
+                <div class="progress" id="progressBar" role="progressbar" aria-label="Task completion"
+                    aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <span id="progressFill"></span>
+                </div>
+                <p id="progressLabel" class="progress-label"></p>
+            </section>
+
+            <section class="workspace panel">
+                <div class="section-heading">
+                    <div>
+                        <h3>Your request</h3>
+                        <p>Describe your goal in natural language, or ask "what's due today?"</p>
+                    </div>
+                    <span class="tag">AGENT MODE</span>
+                </div>
+
+                <label class="sr-only" for="prompt">Your request</label>
+                <textarea id="prompt" rows="4"
+                    placeholder="Example: I have 90 minutes from 4:30 pm and a DBMS assignment due tomorrow..."></textarea>
+
+                <div class="composer-footer">
+                    <span class="helper-text">Tip: press Ctrl + Enter to generate a plan.</span>
+                    <div class="composer-actions">
+                        <button id="micButton" type="button" class="button-secondary" hidden>🎤 Speak</button>
+                        <label class="toggle"><input type="checkbox" id="speakToggle"> Read aloud</label>
+                        <button id="askButton" type="button">Generate plan <span>↗</span></button>
+                    </div>
+                </div>
+
+                <div class="suggestions">
+                    <span class="suggestion-label">QUICK PROMPTS</span>
+                    <button type="button" data-prompt="I have 2 hours tonight">2 hours tonight</button>
+                    <button type="button" data-prompt="I only have 90 minutes from 4:30 pm">90 min from 4:30 pm</button>
+                    <button type="button" data-prompt="I have half an hour to study">Half an hour</button>
+                    <button type="button" data-prompt="What's due today?">What's due today?</button>
+                </div>
+            </section>
+
+            <section class="results panel" id="results">
+                <div class="section-heading">
+                    <div>
+                        <h3>Orchestration results</h3>
+                        <p>Your personalized study plan.</p>
+                    </div>
+                    <div class="heading-actions">
+                        <button id="readPlanButton" class="button-secondary" type="button" hidden>🔊 Read aloud</button>
+                        <span id="resultStatus" class="tag" role="status">AWAITING REQUEST</span>
+                    </div>
+                </div>
+
+                <div id="response" class="response" aria-live="polite">
+                    <div class="empty-state">
+                        <div class="empty-icon">◎</div>
+                        <strong>Your next move starts here.</strong>
+                        <p>Submit a request to generate your first plan.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="tasks-dashboard panel" id="tasks">
+                <div class="tasks-heading">
+                    <div>
+                        <p class="eyebrow">STAY ORGANIZED</p>
+                        <h2>Your tasks</h2>
+                        <p>Manage deadlines, priorities and progress.</p>
+                    </div>
+                    <div class="task-actions">
+                        <button type="button" class="button-secondary" id="refreshTasksButton">↻ Refresh</button>
+                        <button type="button" id="toggleAddTask" aria-expanded="false"
+                            aria-controls="addTaskForm">+ New Task</button>
+                    </div>
+                </div>
+
+                <form id="addTaskForm" hidden>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="taskTitle">Task title *</label>
+                            <input id="taskTitle" name="title" type="text"
+                                placeholder="e.g. Operating Systems Assignment"
+                                maxlength="200" required>
+                        </div>
+                        <div class="form-field">
+                            <label for="taskDeadline">Deadline</label>
+                            <input id="taskDeadline" name="deadline" type="text" maxlength="100"
+                                placeholder="e.g. Monday, Tomorrow or 2026-10-25">
+                        </div>
+                        <div class="form-field">
+                            <label for="taskPriority">Priority</label>
+                            <select id="taskPriority" name="priority">
+                                <option value="High">High</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="cancelAddTask" class="button-secondary">Cancel</button>
+                        <button type="submit" id="addTaskButton">Save Task</button>
+                    </div>
+                    <p id="addTaskStatus" class="status-message" role="status"></p>
+                </form>
+
+                <div class="task-stats">
+                    <article class="task-stat">
+                        <span class="stat-icon">▤</span>
+                        <div><p>Total tasks</p><strong id="totalTasks">0</strong></div>
+                    </article>
+                    <article class="task-stat">
+                        <span class="stat-icon pending-icon">◷</span>
+                        <div><p>Pending</p><strong id="pendingTasks">0</strong></div>
+                    </article>
+                    <article class="task-stat">
+                        <span class="stat-icon completed-icon">✓</span>
+                        <div><p>Completed</p><strong id="completedTasks">0</strong></div>
+                    </article>
+                </div>
+
+                <div class="list-heading">
+                    <div class="filter-tabs" role="group" aria-label="Filter tasks">
+                        <button type="button" class="filter active" data-filter="all" aria-pressed="true">All</button>
+                        <button type="button" class="filter" data-filter="pending" aria-pressed="false">Pending</button>
+                        <button type="button" class="filter" data-filter="completed" aria-pressed="false">Completed</button>
+                    </div>
+                    <span id="allTasksCount">Loading tasks...</span>
+                </div>
+
+                <div id="allTasksList" class="all-tasks-list">
+                    <p class="muted">Loading tasks...</p>
+                </div>
+                <p id="allTasksStatus" class="status-message" role="status"></p>
+            </section>
+
+            <section class="schedule panel" id="schedule">
+                <div class="tasks-heading">
+                    <div>
+                        <p class="eyebrow">YOUR DAY</p>
+                        <h2>Today's schedule</h2>
+                        <p>Fixed events ORION plans around. Study blocks never overlap them.</p>
+                    </div>
+                    <div class="task-actions">
+                        <button type="button" id="toggleAddEvent" aria-expanded="false"
+                            aria-controls="addEventForm">+ New Event</button>
+                    </div>
+                </div>
+
+                <form id="addEventForm" hidden>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="eventName">Event *</label>
+                            <input id="eventName" type="text" maxlength="100" required
+                                placeholder="e.g. Physics Lab">
+                        </div>
+                        <div class="form-field">
+                            <label for="eventTime">Start time *</label>
+                            <input id="eventTime" type="text" maxlength="20" required
+                                placeholder="e.g. 2:30 PM or 14:30">
+                        </div>
+                        <div class="form-field">
+                            <label for="eventDuration">Duration (min)</label>
+                            <input id="eventDuration" type="number" min="5" max="480" value="60">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="cancelAddEvent" class="button-secondary">Cancel</button>
+                        <button type="submit" id="addEventButton">Save Event</button>
+                    </div>
+                    <p id="addEventStatus" class="status-message" role="status"></p>
+                </form>
+
+                <div id="scheduleList" class="schedule-list"><p class="muted">Loading schedule...</p></div>
+                <p id="scheduleStatus" class="status-message" role="status"></p>
+            </section>
+
+            <section class="mcp panel" id="mcp">
+                <div class="tasks-heading">
+                    <div>
+                        <p class="eyebrow">FOR DEVELOPERS</p>
+                        <h2>Connect an agent</h2>
+                        <p>ORION is an MCP server over Streamable HTTP. Point any MCP client, such as Alexa+, at this endpoint. This UI uses the same tools.</p>
+                    </div>
+                </div>
+                <div class="endpoint">
+                    <code id="mcpUrl">…</code>
+                    <button id="copyMcpUrl" class="button-secondary" type="button">Copy</button>
+                </div>
+                <div class="list-heading">
+                    <h3>Available tools</h3>
+                    <span id="mcpToolCount"></span>
+                </div>
+                <div id="mcpToolList" class="tool-grid"><p class="muted">Loading tools...</p></div>
+            </section>
+
+            <footer>
+                <span>ORION © 2026</span>
+                <span>CONTEXT-AWARE · ADAPTIVE · TOOL-ENABLED</span>
+            </footer>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+# mcp 2.x renamed FastMCP -> MCPServer; this project targets the 1.x API.
+mcp>=1.30,<2
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.0
+# Optional: set ORION_BEDROCK_MODEL_ID and install boto3 to enable Amazon Bedrock
+# voice polishing (see README).
+# boto3>=1.34

@@ -1,0 +1,12 @@
+# One-click deploy on Render: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: orion
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ORION_BEDROCK_MODEL_ID   # optional: enables Amazon Bedrock voice polish
+        sync: false
+      - key: AWS_REGION
+        sync: false
