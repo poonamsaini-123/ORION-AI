@@ -1,130 +1,242 @@
-# ORION — Intelligent Orchestration
+# ORION — Intelligent Orchestration Agent
 
-**An MCP server that lets any voice or chat agent manage your tasks and your day, and turns "I have 90 minutes" into a deadline-aware study plan, spoken back in plain language.**
+**Think clearly. Plan intelligently. Act with context.**
 
-Built for the *Build, Ship, Shape: Amazon Developer Hackathon*, **Alexa+ track** (self-hosted MCP server over Streamable HTTP).
+ORION is a personal orchestration agent that helps users decide what to work on based on available time, task deadlines, and scheduled events. It combines a schedule-aware planning engine, a self-hosted Model Context Protocol (MCP) server, and a voice-enabled web interface to make everyday task and study management more actionable.
 
-![ORION web app](docs/screenshot-desktop.png)
+[**View Source Code**](https://github.com/poonamsaini-123/ORION-AI) · **Built for:** Build, Ship, Shape: Amazon Developer Hackathon — Alexa+ track
 
-## Why it exists
-Students juggle assignments, classes and labs, and the daily question is *"what should I work on right now, given the time I actually have?"* Task apps list work; they don't plan around the day, and they can't be used hands-free. ORION answers the question, and because it speaks MCP, an assistant like Alexa+ can ask for a briefing, plan the next 45 minutes, add a lab to the timetable, or tick off a task, all by voice.
+---
 
-## Highlights
-- **Full MCP surface:** 13 tools, 3 resources and 2 prompts over Streamable HTTP. Negotiates protocol `2025-11-25` (verified with the Python SDK 1.30).
-- **Safety annotations on every tool:** read-only, write or destructive hints, so a client can ask before deleting.
-- **Voice-first tools:** `get_daily_briefing` and `what_should_i_do_now` return a ready-to-speak `spoken` field.
-- **A schedule you can edit:** `add_event` / `remove_event` (or the UI). Plans never overlap an event; a block is shortened to fit the gap before one.
-- **Understands how people talk:** "1.5 hours", "2 hours 30 minutes", "from 4:30 pm", and deadlines such as "Monday", "2026-10-25", "next Friday".
-- **One source of truth:** the web app calls ORION *through its own MCP server*, so the UI and Alexa+ use identical tools.
-- **Voice demo built in:** speak a request, hear the plan read back (browser Web Speech API; Chrome/Edge).
-- **Timezone-aware:** set `ORION_TZ` so greetings and "now" follow the user's day even on a UTC server.
-- **Optional Amazon Bedrock polish** for more natural spoken replies, with a safe fallback.
-- **Verified:** 78 automated tests, including protocol-level MCP tests and a live end-to-end run of the real server.
+## Overview
 
+Traditional task managers store to-do lists. ORION helps turn those tasks into an actionable plan.
+
+Give ORION a time window, such as *“I have 90 minutes,”* and it can organize a study session around pending tasks, deadlines, and fixed events. Users can also manage tasks and schedules, request daily briefings, and hear plans read aloud through supported browsers.
+
+ORION exposes its capabilities through a self-hosted MCP server, allowing compatible MCP clients to discover and invoke its tools over Streamable HTTP.
+
+## Key Features
+
+- **Context-aware study planning:** Organizes work around available time, deadlines, and scheduled events.
+- **MCP server:** Exposes 13 tools, 3 resources, and 2 prompts through Streamable HTTP.
+- **Task management:** Create, edit, complete, reopen, and remove tasks.
+- **Schedule management:** Add and remove classes, labs, appointments, and other fixed events.
+- **Daily briefings:** Summarizes pending work, deadlines, and upcoming events.
+- **Voice interaction:** Supports browser-based speech input and read-aloud responses where the Web Speech API is available.
+- **Safety-aware tools:** Provides read-only, write, and destructive-operation annotations.
+- **Reliable local storage:** Uses validated inputs and atomic file writes for task and schedule data.
+- **Deployment options:** Includes Docker packaging and a Render Blueprint configuration.
+- **Optional Amazon Bedrock integration:** Can polish spoken summaries, with a deterministic fallback when the optional service is unavailable.
+
+## Application Screenshots
+
+### ORION Dashboard
+![ORION Dashboard](docs/screenshots/dashboard.png)
+
+### Study Planner and Schedule
+![ORION Study Planner](docs/screenshots/study-planner.png)
+
+### MCP Tools and API
+![ORION MCP Tools](docs/screenshots/mcp-tools.png)
 ## Architecture
+
+```mermaid
+flowchart LR
+    U["User / MCP Client"]
+    UI["Web Interface"]
+    API["FastAPI Backend"]
+    MCP["MCP Server"]
+    PLAN["Planning Engine"]
+    STORE["JSON Storage"]
+    BEDROCK["Optional Amazon Bedrock"]
+
+    U --> UI
+    UI --> API
+    API --> MCP
+    U --> MCP
+    MCP --> PLAN
+    PLAN --> STORE
+    PLAN -. "Optional voice polish" .-> BEDROCK
 ```
-Alexa+ / MCP Inspector / any MCP client ──Streamable HTTP──►  /mcp ─┐
-                                                                    ├─► mcp_server.py (tools · resources · prompts)
-Web UI ──REST──► FastAPI (server.py) ──MCP client (loopback)──►  /mcp ─┘          │
-                                                                    agent.py · briefing.py · tools.py · clock.py
-                                                                                   │
-                                                              data/tasks.json · data/schedule.json (atomic writes)
-```
 
-### MCP tools
-| Tool | Hint | Purpose |
-|---|---|---|
-| `get_tasks(status)` | read-only | List tasks (`all`, `pending`, `completed`) |
-| `get_schedule` | read-only | Today's fixed events, in time order |
-| `create_study_plan(available_minutes, start_hour, start_minute)` | read-only | Deadline-aware plan around the schedule |
-| `get_daily_briefing(voice_polish)` | read-only | Overdue / due today / next event, plus a `spoken` summary |
-| `what_should_i_do_now(available_minutes, voice_polish)` | read-only | Plan starting *now*, with a `spoken` summary |
-| `get_system_status` | read-only | Health and counts |
-| `create_task(title, deadline, priority)` | write | Add a task |
-| `add_event(time, name, duration_minutes)` | write | Add a class/lab/appointment (`2pm`, `2:30 PM`, `14:30`) |
-| `update_task(task_id, title, deadline, priority)` | idempotent write | Edit a task |
-| `complete_task(task_id)` / `reopen_task(task_id)` | idempotent write | Toggle completion |
-| `remove_task(task_id)` | **destructive** | Delete a task |
-| `remove_event(event_id)` | **destructive** | Delete an event |
+The web interface and compatible MCP clients access the same underlying capabilities. The planner uses rule-based request parsing and scheduling logic rather than relying on an LLM to make planning decisions.
 
-**Resources:** `orion://tasks`, `orion://schedule`, `orion://briefing`  
-**Prompts:** `plan_my_evening(hours)`, `weekly_review`
+## Technology Stack
 
-## Run locally
+| Area | Technologies |
+|---|---|
+| Backend | Python, FastAPI |
+| Agent interoperability | Model Context Protocol (MCP), Streamable HTTP |
+| Frontend | HTML, CSS, JavaScript |
+| Planning and data | Rule-based scheduling, JSON persistence |
+| Testing | Pytest, MCP integration tests |
+| Deployment | Docker, Render configuration |
+| Optional cloud integration | Amazon Bedrock |
+
+## MCP Capabilities
+
+ORION exposes the following capabilities to compatible MCP clients.
+
+| Capability | Examples |
+|---|---|
+| Task operations | `get_tasks`, `create_task`, `update_task`, `complete_task`, `remove_task` |
+| Schedule operations | `get_schedule`, `add_event`, `remove_event` |
+| Planning and briefings | `create_study_plan`, `what_should_i_do_now`, `get_daily_briefing` |
+| System information | `get_system_status` |
+| Resources | `orion://tasks`, `orion://schedule`, `orion://briefing` |
+| Prompts | `plan_my_evening`, `weekly_review` |
+
+The server includes safety annotations to help clients distinguish read-only operations from changes and destructive actions. Actual confirmation behavior depends on the MCP client.
+
+**MCP endpoint:** `/mcp`  
+**API documentation:** `/docs`
+
+The project README reports negotiation of MCP protocol version `2025-11-25` and verification using the Python MCP SDK.
+
+## Run Locally
+
+### Prerequisites
+
+- Python 3.11 or a compatible version supported by the project's dependencies
+- Git
+- A modern browser for the web interface
+
+### 1. Clone the repository
+
 ```bash
-cd backend
-python -m venv venv && source venv/bin/activate     # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python server.py
-```
-- Web app: http://127.0.0.1:8000
-- MCP endpoint: `http://127.0.0.1:8000/mcp` (with or without trailing slash)
-- API docs: http://127.0.0.1:8000/docs
-
-The page finds the backend automatically: it uses its own origin when ORION serves it, otherwise `http://127.0.0.1:8000`, so opening `frontend/index.html` with VS Code Live Server also works while the backend runs. Add `?api=https://your-host` to point it elsewhere.
-
-### See the MCP server in action
-```bash
-python demo/mcp_demo.py                      # or: python demo/mcp_demo.py https://your-app/mcp
-```
-A scripted agent connects over Streamable HTTP, lists the tools with their safety hints, asks for a briefing, plans around a new lab, creates a task, and cleans up after itself. Or use the official inspector:
-```bash
-npx @modelcontextprotocol/inspector          # transport: Streamable HTTP, URL: http://127.0.0.1:8000/mcp
+git clone https://github.com/poonamsaini-123/ORION-AI.git
+cd ORION-AI
 ```
 
-## Deploy
-```bash
-docker build -t orion . && docker run -p 8000:8000 -v orion-data:/data orion
+### 2. Create and activate a virtual environment
+
+**Windows PowerShell**
+
+```powershell
+python -m venv backend/venv
+.\backend\venv\Scripts\python.exe -m pip install -r backend/requirements.txt
 ```
-Or use the included `render.yaml` (Render Blueprint). On a public host:
-- `HOST=0.0.0.0` (set in the Dockerfile). Render's hostname is allowed automatically; elsewhere set `ORION_ALLOWED_HOSTS=your.domain.com` (MCP DNS-rebinding protection rejects unknown hosts by design).
-- Set `ORION_TZ` to your timezone (for example `Asia/Kolkata`).
-- Mount a persistent disk and set `ORION_DATA_DIR`, otherwise data resets whenever the host recreates its filesystem (Render's free tier has no persistent disk).
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `HOST` / `PORT` | `127.0.0.1` / `8000` | Bind address and port |
-| `ORION_TZ` | system zone | IANA timezone, e.g. `Asia/Kolkata` |
-| `ORION_DATA_DIR` | `./data` | Where `tasks.json` and `schedule.json` live |
-| `ORION_ALLOWED_HOSTS` | *(empty)* | Public hostnames allowed to call `/mcp` |
-| `MCP_URL` | `http://127.0.0.1:$PORT/mcp/` | How the REST layer reaches the MCP server |
-| `ORION_BEDROCK_MODEL_ID` | *(empty)* | Enables Amazon Bedrock voice polish |
-| `AWS_REGION` | `us-east-1` | Region for Bedrock |
+**macOS / Linux**
 
-## Optional: Amazon Bedrock voice polish
-Set `ORION_BEDROCK_MODEL_ID`, `pip install boto3`, and provide AWS credentials. ORION then asks Bedrock (Converse API) to rephrase spoken summaries naturally, and **rejects any rewrite that drops a number from the original**. Any failure falls back to the deterministic text, so ORION never depends on AWS. Step-by-step setup and a checker (`python scripts/check_bedrock.py`) are in [docs/AWS_BEDROCK.md](docs/AWS_BEDROCK.md). *This path is covered by mocked tests; verify it against your own AWS account.*
-
-## Tests
 ```bash
-pip install -r backend/requirements.txt pytest
+python -m venv backend/venv
+source backend/venv/bin/activate
+pip install -r backend/requirements.txt
+```
+
+### 3. Start the backend
+
+From the repository root:
+
+```bash
+python backend/server.py
+```
+
+If your environment requires a specific working directory, follow the startup instructions in the backend source or run the server from `backend/`.
+
+### 4. Open ORION
+
+- **Web application:** `http://127.0.0.1:8000`
+- **API documentation:** `http://127.0.0.1:8000/docs`
+- **MCP endpoint:** `http://127.0.0.1:8000/mcp`
+
+Keep the backend running while using the interface.
+
+## Run the MCP Demo
+
+With ORION running, execute the included demo client from the repository root:
+
+```bash
+python demo/mcp_demo.py
+```
+
+To connect to a deployed MCP endpoint:
+
+```bash
+python demo/mcp_demo.py https://your-host/mcp
+```
+
+The demo illustrates tool discovery, a daily briefing, schedule-aware planning, and task operations. Use only an endpoint you control or have permission to access.
+
+You can also launch the MCP Inspector:
+
+```bash
+npx @modelcontextprotocol/inspector
+```
+
+Select Streamable HTTP and configure the server URL as `http://127.0.0.1:8000/mcp`.
+
+## Run Tests
+
+Install the backend dependencies and test runner, then run the suite from the repository root:
+
+```bash
+python -m pip install -r backend/requirements.txt
+python -m pip install pytest
 python -m pytest -q
 ```
-Covers request parsing, deadline logic, the planner (ordering, no overlaps, end of day), storage (validation, corruption backup, atomic writes), schedule editing, timezone handling, the MCP protocol (tools, annotations, resources, prompts), and a live end-to-end run of the real server including the demo client.
 
-## Project layout
+The project README reports **78 automated tests** covering planning logic, request parsing, data validation, persistence, scheduling, timezones, MCP capabilities, and integration flows. Run the current suite to confirm the latest result.
+
+## Configuration
+
+ORION supports environment-based configuration. See `.env.example` and the backend configuration for the exact supported variables.
+
+| Variable | Purpose |
+|---|---|
+| `HOST` / `PORT` | Server bind address and port |
+| `ORION_TZ` | Timezone used for time-aware behavior, such as `Asia/Kolkata` |
+| `ORION_DATA_DIR` | Location for task and schedule data |
+| `ORION_ALLOWED_HOSTS` | Allowed public hostnames for MCP requests |
+| `MCP_URL` | MCP endpoint used by the REST layer |
+| `ORION_BEDROCK_MODEL_ID` | Optional Amazon Bedrock model for voice-summary polish |
+| `AWS_REGION` | AWS region for the optional Bedrock integration |
+
+Do not commit `.env` files, credentials, API keys, or other secrets. For public deployment, configure appropriate authentication and host restrictions before exposing the service to untrusted users.
+
+## Deployment
+
+The repository includes a `Dockerfile` and `render.yaml` for deployment workflows.
+
+For a local Docker run:
+
+```bash
+docker build -t orion .
+docker run -p 8000:8000 -v orion-data:/data orion
 ```
-backend/   server.py (REST + UI + /mcp) · mcp_server.py (tools/resources/prompts)
-           agent.py (parsing + planner) · briefing.py (spoken text, Bedrock) · tools.py (storage) · clock.py
-frontend/  index.html · script.js · style.css
-demo/      mcp_demo.py        scripts/  check_bedrock.py        docs/  AWS_BEDROCK.md, screenshots
-tests/     78 tests           Dockerfile · render.yaml · .github/workflows/ci.yml
-```
 
-## Known limitations
-- No authentication on the REST API or MCP endpoint (hackathon scope). Add auth before storing anything private.
-- One shared task list and timetable, not multi-user.
-- The timetable is a single day's list of events, not a week calendar.
-- Deadlines are free text, understood for common forms (today, tomorrow, weekdays, ISO dates, DD/MM); anything else counts as "no deadline".
-- Request parsing is rule-based, not a language model.
-- Voice input/output in the web app needs a browser with the Web Speech API (Chrome/Edge).
+Before deploying publicly, configure environment variables, verify the allowed hostnames, and use persistent storage for task and schedule data. The included configuration is a starting point, not a substitute for production security review.
 
-## What was built during the hackathon
-ORION began as a rule-based planner exposing a handful of MCP tools (`get_tasks`, `get_schedule`, `create_study_plan`, `create_task`, `complete_task`) with a basic web UI. During the submission window it was substantially extended:
-- MCP: 8 more tools, resources, prompts, safety annotations, voice-first tools, spoken briefings, protocol 2025-11-25 verified, DNS-rebinding configuration for deployment, and `/mcp` served with or without a trailing slash.
-- Planner rewrite: correct duration/time parsing, real deadline understanding, schedule-aware blocks that never overlap events, end-of-day handling.
-- An editable timetable (tools and UI), task edit/delete/reopen, filters, a daily briefing card with progress, voice input and read-aloud, and a live MCP tool catalog in the UI.
-- Reliability: validated input everywhere (including direct MCP calls), atomic saves with corruption backup, timezone support.
-- Engineering: 78 tests, Dockerfile, Render blueprint, CI, scripted MCP demo client, optional Bedrock integration.
+## Engineering Highlights
+
+- Designed a unified interface for web users and MCP-compatible clients.
+- Implemented deadline-aware scheduling with event-overlap avoidance.
+- Added safety metadata for task and schedule operations.
+- Used input validation and atomic persistence to improve data integrity.
+- Added automated tests, an MCP demo client, container packaging, and deployment configuration.
+
+## Current Limitations
+
+- Request interpretation and planning are rule-based, not general-purpose LLM reasoning.
+- The application uses one shared task list and a single-day schedule.
+- The REST and MCP endpoints do not currently provide authentication; do not use them to store private data on a public deployment without adding appropriate security controls.
+- Voice input and output depend on browser support.
+- The optional Amazon Bedrock path requires separate AWS configuration and should be verified against the target AWS account.
+
+## Roadmap
+
+- Add authentication and per-user data isolation.
+- Introduce recurring events and multi-day calendar planning.
+- Improve natural-language parsing and scheduling preferences.
+- Add deployment monitoring and broader integration testing.
 
 ## License
-MIT — see [LICENSE](LICENSE).
+
+The repository should include a `LICENSE` file before a license is claimed here. Add the intended license text, or update this section to reflect the actual license.
+
+---
+
+**Author:** [poonamsaini-123](https://github.com/poonamsaini-123)  
+**Repository:** [ORION-AI](https://github.com/poonamsaini-123/ORION-AI)
